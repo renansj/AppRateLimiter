@@ -28,7 +28,7 @@ namespace AppRateLimiter.Web.Tests
 
             var ctx = new Mock<HttpContextBase>();
             ctx.SetupGet(c => c.Request).Returns(request.Object);
-            ctx.SetupGet(c => c.User).Returns((IPrincipal?)user);
+            ctx.SetupGet(c => c.User).Returns(() => user!);
             return ctx.Object;
         }
 
