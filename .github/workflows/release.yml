@@ -15,6 +15,7 @@ permissions:
 env:
   LIB_MAIN: src/AppRateLimiter/AppRateLimiter.csproj
   LIB_REDIS: src/AppRateLimiter.Redis/AppRateLimiter.Redis.csproj
+  LIB_WEB: src/AppRateLimiter.Web/AppRateLimiter.Web.csproj
   TEST_INT: tests/AppRateLimiter.IntegrationTests/AppRateLimiter.IntegrationTests.csproj
   TEST_REDIS: tests/AppRateLimiter.Redis.Tests/AppRateLimiter.Redis.Tests.csproj
 
@@ -32,7 +33,6 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # Install Redis from the Ubuntu repos (no Docker Hub dependency).
       - name: Start Redis
         run: |
           sudo apt-get update
@@ -40,10 +40,8 @@ jobs:
           sudo systemctl start redis-server || redis-server --daemonize yes
           redis-cli ping
 
-      - name: Build
-        run: |
-          dotnet build "$TEST_INT"   -c Release
-          dotnet build "$TEST_REDIS" -c Release
+      - name: Build solution
+        run: dotnet build AppRateLimiter.slnx -c Release
 
       # Tests must pass before publishing a stable release.
       - name: Test
@@ -51,11 +49,11 @@ jobs:
           dotnet test "$TEST_INT"   -c Release --no-build --verbosity normal
           dotnet test "$TEST_REDIS" -c Release --no-build --verbosity normal
 
-      # Uses the stable Version defined in each csproj (e.g. 1.0.0).
       - name: Pack (stable)
         run: |
           dotnet pack "$LIB_MAIN"  -c Release -o ./artifacts
           dotnet pack "$LIB_REDIS" -c Release -o ./artifacts
+          dotnet pack "$LIB_WEB"   -c Release -o ./artifacts
 
       # Publish to nuget.org. --skip-duplicate avoids failing if this version was
       # already published (NuGet versions are immutable). Bump Version to release anew.

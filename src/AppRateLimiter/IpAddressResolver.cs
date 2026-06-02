@@ -40,6 +40,18 @@ namespace AppRateLimiter
 
         private static string ToKey(IPAddress ip)
         {
+            return NormalizeIp(ip);
+        }
+
+        /// <summary>
+        /// Normalizes an <see cref="IPAddress"/> to a stable rate-limit key: IPv4 stays as-is
+        /// (/32), IPv4-mapped IPv6 folds to plain IPv4, and other IPv6 addresses collapse to
+        /// their /64 prefix (so a client cannot rotate within its /64 to dodge the limit).
+        /// Exposed for adapters outside ASP.NET Core (e.g. classic System.Web) that need the
+        /// exact same keying as the middleware.
+        /// </summary>
+        public static string NormalizeIp(IPAddress ip)
+        {
             byte[] b = ip.GetAddressBytes();
             if (b.Length != 16) return ip.ToString();          // IPv4 -> /32
             if (IsIPv4Mapped(b))                                // ::ffff:a.b.c.d -> a.b.c.d

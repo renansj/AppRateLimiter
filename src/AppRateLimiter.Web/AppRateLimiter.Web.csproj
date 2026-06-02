@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <!-- Allows building this net472 project on non-Windows CI runners. Build-time only. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+
+    <PackageId>AppRateLimiter.Web</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>AppRateLimiter</Authors>
+    <Description>Classic ASP.NET (System.Web) integration for AppRateLimiter: an async IHttpModule that applies the same IP and claim rate-limit rules to WebForms / MVC 5 / Web API 2 apps on .NET Framework. Reuses the core store (in-memory or distributed Redis).</Description>
+    <PackageTags>ratelimit;rate-limiting;system.web;httpmodule;aspnet;iis;throttling</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Web" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Build-only: lets net472 compile on Linux runners. No runtime dependency. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AppRateLimiter\AppRateLimiter.csproj" />
+    <ProjectReference Include="..\AppRateLimiter.Redis\AppRateLimiter.Redis.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
