@@ -10,8 +10,13 @@
     <Authors>AppRateLimiter</Authors>
     <Description>Redis-backed distributed store for AppRateLimiter. Runs the whole sliding-window calculation in a single atomic Lua script (race-free across instances), uses the Redis server clock, and sets TTL = 2x window.</Description>
     <PackageTags>ratelimit;redis;distributed;aspnetcore;throttling</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="StackExchange.Redis" Version="2.8.16" />

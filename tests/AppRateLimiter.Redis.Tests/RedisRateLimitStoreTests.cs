@@ -1,4 +1,6 @@
 using StackExchange.Redis;
+using Microsoft.Extensions.DependencyInjection;
+using AppRateLimiter;
 using Xunit;
 
 namespace AppRateLimiter.Redis.Tests;
@@ -76,5 +78,27 @@ public sealed class RedisRateLimitStoreTests : IClassFixture<RedisFixture>
             .Select(_ => store.HitAsync(key, 5, Window, DateTimeOffset.UtcNow).AsTask()));
 
         Assert.Equal(5, results.Count(r => r.Allowed));
+    }
+
+    // Configuring via AddRedisRateLimiter(connectionString, keyPrefix) registers a working
+    // store (same path the sample app uses) and the custom keyPrefix is applied to the keys.
+    [SkippableFact]
+    public async Task AddRedisRateLimiter_ConfiguresStore_AndAppliesKeyPrefix()
+    {
+        Skip.IfNot(_fx.Available, "Redis not reachable at " + _fx.Config);
+        const string prefix = "cfg-rl:";
+        var provider = new ServiceCollection()
+            .AddRedisRateLimiter(_fx.Config, prefix)
+            .BuildServiceProvider();
+
+        var store = provider.GetRequiredService<IRateLimitStore>();
+        var key = NewKey();
+
+        for (int i = 0; i < 5; i++)
+            Assert.True((await store.HitAsync(key, 5, Window, DateTimeOffset.UtcNow)).Allowed);
+        Assert.False((await store.HitAsync(key, 5, Window, DateTimeOffset.UtcNow)).Allowed);
+
+        // The configured prefix is the one actually used for the Redis key.
+        Assert.True(_fx.Mux!.GetDatabase().KeyExists(prefix + key));
     }
 }
