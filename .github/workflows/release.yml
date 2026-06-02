@@ -1,0 +1,72 @@
+name: Release
+
+# Runs when a PR is merged into main (push to main). Publishes the stable
+# version to nuget.org (the feed Visual Studio uses by default) and GitHub Packages.
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  LIB_MAIN: src/AppRateLimiter/AppRateLimiter.csproj
+  LIB_REDIS: src/AppRateLimiter.Redis/AppRateLimiter.Redis.csproj
+  TEST_INT: tests/AppRateLimiter.IntegrationTests/AppRateLimiter.IntegrationTests.csproj
+  TEST_REDIS: tests/AppRateLimiter.Redis.Tests/AppRateLimiter.Redis.Tests.csproj
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7
+        ports: [ "6379:6379" ]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    env:
+      REDIS: localhost:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build
+        run: |
+          dotnet build "$TEST_INT"   -c Release
+          dotnet build "$TEST_REDIS" -c Release
+
+      # Tests must pass before publishing a stable release.
+      - name: Test
+        run: |
+          dotnet test "$TEST_INT"   -c Release --no-build --verbosity normal
+          dotnet test "$TEST_REDIS" -c Release --no-build --verbosity normal
+
+      # Uses the stable Version defined in each csproj (e.g. 1.0.0).
+      - name: Pack (stable)
+        run: |
+          dotnet pack "$LIB_MAIN"  -c Release -o ./artifacts
+          dotnet pack "$LIB_REDIS" -c Release -o ./artifacts
+
+      # Publish to nuget.org. --skip-duplicate avoids failing if this version was
+      # already published (NuGet versions are immutable). Bump Version to release anew.
+      - name: Publish to nuget.org
+        run: dotnet nuget push "./artifacts/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+
+      - name: Publish to GitHub Packages
+        run: |
+          dotnet nuget add source --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }} \
+            --store-password-in-clear-text --name github \
+            "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          dotnet nuget push "./artifacts/*.nupkg" --source github --skip-duplicate
