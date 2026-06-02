@@ -22,17 +22,6 @@ jobs:
   build-test-pack:
     runs-on: ubuntu-latest
 
-    # Real Redis so the Redis/integration tests run for real (not skipped).
-    services:
-      redis:
-        image: redis:7
-        ports: [ "6379:6379" ]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 5
-
     env:
       REDIS: localhost:6379
 
@@ -42,6 +31,16 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+
+      # Install Redis from the Ubuntu repos instead of pulling a Docker Hub image,
+      # which is unreliable on hosted runners (anonymous pull rate limits / timeouts).
+      # This makes the Redis tests run for real without depending on an external registry.
+      - name: Start Redis
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y redis-server
+          sudo systemctl start redis-server || redis-server --daemonize yes
+          redis-cli ping
 
       # Build only the Linux-compatible projects (the two libs + the two test
       # projects, which transitively pull in Sample.Api/net10.0).
