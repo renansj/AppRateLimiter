@@ -13,6 +13,13 @@ namespace AppRateLimiter
     /// </summary>
     public sealed class RateLimitMiddleware
     {
+        /// <summary>
+        /// Separator placed between a rule's name and the request key when building the store
+        /// key, so different rules cannot collide on the same bucket. Exposed so adapters
+        /// outside ASP.NET Core (e.g. classic System.Web) build byte-identical keys.
+        /// </summary>
+        public const string KeySeparator = "\u001f";
+
         private readonly RequestDelegate _next;
         private readonly IReadOnlyList<RateLimitRule> _rules;
         private readonly IRateLimitStore _store;
@@ -36,7 +43,7 @@ namespace AppRateLimiter
                 // Namespacing by rule name isolates buckets so one rule's keys cannot collide
                 // with another's.
                 RateLimitResult result = await _store
-                    .HitAsync(rule.Name + "\u001f" + key, rule.PermitLimit, rule.Window, now)
+                    .HitAsync(rule.Name + KeySeparator + key, rule.PermitLimit, rule.Window, now)
                     .ConfigureAwait(false);
                 if (!result.Allowed)
                 {

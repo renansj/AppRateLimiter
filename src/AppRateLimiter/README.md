@@ -16,9 +16,10 @@ runtimes through the newest:
 This is the point: on those older targets there is no built-in limiter (native rate limiting
 only arrived in .NET 7 via `System.Threading.RateLimiting`).
 
-> It is **ASP.NET Core middleware**, so it plugs into the ASP.NET Core request pipeline. It is
-> **not** for classic System.Web apps (WebForms / MVC 5 / Web API 2) — those don't have this
-> middleware/`HttpContext` model.
+> It is **ASP.NET Core middleware**, so it plugs into the ASP.NET Core request pipeline. For
+> classic System.Web apps (WebForms / MVC 5 / Web API 2), which use a different
+> middleware/`HttpContext` model, use the companion package **`AppRateLimiter.Web`** (an async
+> `IHttpModule` that reuses this same store and rules).
 
 ---
 

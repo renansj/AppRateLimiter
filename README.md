@@ -6,10 +6,12 @@ sample and an integration test suite.
 ```
 src/AppRateLimiter ............ the library (NuGet package, targets netstandard2.0)
 src/AppRateLimiter.Redis ...... distributed store for multi-instance deployments (Redis)
+src/AppRateLimiter.Web ........ classic ASP.NET (System.Web) integration: async IHttpModule (net472)
 samples/Sample.Api ............ minimal API showing IP + JWT-claim limiting in the right order
 samples/Sample.NetFramework ... the SAME library on .NET Framework 4.7.2 (ASP.NET Core 2.2)
 tests/AppRateLimiter.IntegrationTests ....... end-to-end tests over the sample (in-memory)
 tests/AppRateLimiter.Redis.Tests ............ distributed store tests (need a Redis)
+tests/AppRateLimiter.Web.Tests .............. System.Web adapter tests (net472, run on Windows)
 ```
 
 For library usage and integration instructions, see
@@ -36,13 +38,47 @@ dotnet run --project samples/Sample.Api
 `samples/Sample.NetFramework` proves the legacy story: the **same** library and API
 (`AddAppRateLimiter` / `UseRateLimiting` / `RateLimitRules`) on **.NET Framework 4.7.2** using
 ASP.NET Core 2.2's classic `Startup`. Only the host and JWT plumbing differ (on 2.x you clear
-`JwtSecurityTokenHandler.DefaultInboundClaimTypeMap` instead of `MapInboundClaims`). Note: this
-is ASP.NET Core middleware, so it targets ASP.NET Core apps on Full Framework — not classic
-System.Web (WebForms / MVC 5).
+`JwtSecurityTokenHandler.DefaultInboundClaimTypeMap` instead of `MapInboundClaims`). This path is
+ASP.NET Core middleware on Full Framework. For classic System.Web apps (WebForms / MVC 5 /
+Web API 2), use `AppRateLimiter.Web` (see below).
 
 ```bash
 dotnet build samples/Sample.NetFramework   # builds a net472 executable
 ```
+
+## Classic ASP.NET (System.Web)
+
+The core is ASP.NET Core middleware, so it does not plug into classic `System.Web`
+(WebForms / MVC 5 / Web API 2). That is the most common legacy Windows scenario: an IIS web farm
+behind a load balancer. `AppRateLimiter.Web` (net472) closes that gap with an async `IHttpModule`
+that applies the same IP and claim rules and reuses the same store, so a farm backed by Redis
+shares one global counter.
+
+Use it when your app runs on the classic System.Web pipeline. Configure it once from
+`Global.asax` (classic modules cannot use DI) and register the module in `web.config`:
+
+```csharp
+// Global.asax -> Application_Start
+RateLimitHttpModule.Configure(
+    store: new InMemoryRateLimitStore(),          // or RedisRateLimitStore(...) for a web farm
+    ipRules:    new[] { WebRateLimitRules.ByIp(100, TimeSpan.FromMinutes(1)) },
+    claimRules: new[] { WebRateLimitRules.ByClaim("sub", 1000, TimeSpan.FromMinutes(1)) });
+```
+
+```xml
+<!-- web.config -->
+<system.webServer>
+  <modules>
+    <add name="AppRateLimiter" type="AppRateLimiter.Web.RateLimitHttpModule, AppRateLimiter.Web" />
+  </modules>
+</system.webServer>
+```
+
+IP rules run pre-auth on `BeginRequest`; claim rules run post-auth on `PostAuthenticateRequest`,
+reading the validated `HttpContext.User`. Rejections use the same `429` + `Retry-After` + JSON body
+as the ASP.NET Core middleware, and all the security invariants (atomic counting, claims from the
+validated identity, X-Forwarded-For only behind trusted proxies, IPv6 /64 keying) are preserved.
+See [`src/AppRateLimiter.Web/README.md`](src/AppRateLimiter.Web/README.md).
 
 ## Run the tests
 
