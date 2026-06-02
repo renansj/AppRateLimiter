@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.0 is consumable by .NET Framework 4.6.1+, .NET Core 2.0+ and .NET 5/6/7/8/9/10 -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+
+    <PackageId>AppRateLimiter</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>AppRateLimiter</Authors>
+    <Description>Flexible, thread-safe application-level rate limiting middleware for ASP.NET Core. Limits by client IP (pre-auth) and by dynamic JWT claims (post-auth). Compatible with every .NET that supports netstandard2.0.</Description>
+    <PackageTags>ratelimit;rate-limiting;middleware;aspnetcore;jwt;security;throttling</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 2.2.0 is the last version that targets netstandard2.0, giving the widest consumer reach -->
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="2.2.0" />
+    <!-- Provides ValueTask<T> on netstandard2.0; a no-op facade on modern .NET -->
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,20 @@
+# Build output
+bin/
+obj/
+
+# IDE / editor
+.vs/
+*.user
+
+# Test results
+[Tt]est[Rr]esults/
+
+# NuGet output
+*.nupkg
+*.snupkg
+
+# Local tooling (e.g. a Redis downloaded just to run the tests)
+.tools/
+
+# Redis snapshot
+dump.rdb

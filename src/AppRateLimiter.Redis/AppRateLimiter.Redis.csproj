@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+
+    <PackageId>AppRateLimiter.Redis</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>AppRateLimiter</Authors>
+    <Description>Redis-backed distributed store for AppRateLimiter. Runs the whole sliding-window calculation in a single atomic Lua script (race-free across instances), uses the Redis server clock, and sets TTL = 2x window.</Description>
+    <PackageTags>ratelimit;redis;distributed;aspnetcore;throttling</PackageTags>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StackExchange.Redis" Version="2.8.16" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AppRateLimiter\AppRateLimiter.csproj" />
+  </ItemGroup>
+
+</Project>
