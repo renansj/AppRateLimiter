@@ -1,0 +1,80 @@
+name: CI
+
+# Runs on every PR targeting main. This is the required gate: a PR can only be
+# merged if build + all tests pass.
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  packages: write   # needed to push prerelease packages to GitHub Packages
+
+# Projects that build/run on a Linux runner. Sample.NetFramework (net472) is
+# intentionally excluded: it cannot build on Linux.
+env:
+  LIB_MAIN: src/AppRateLimiter/AppRateLimiter.csproj
+  LIB_REDIS: src/AppRateLimiter.Redis/AppRateLimiter.Redis.csproj
+  TEST_INT: tests/AppRateLimiter.IntegrationTests/AppRateLimiter.IntegrationTests.csproj
+  TEST_REDIS: tests/AppRateLimiter.Redis.Tests/AppRateLimiter.Redis.Tests.csproj
+
+jobs:
+  build-test-pack:
+    runs-on: ubuntu-latest
+
+    env:
+      REDIS: localhost:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Install Redis from the Ubuntu repos instead of pulling a Docker Hub image,
+      # which is unreliable on hosted runners (anonymous pull rate limits / timeouts).
+      # This makes the Redis tests run for real without depending on an external registry.
+      - name: Start Redis
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y redis-server
+          sudo systemctl start redis-server || redis-server --daemonize yes
+          redis-cli ping
+
+      # Build only the Linux-compatible projects (the two libs + the two test
+      # projects, which transitively pull in Sample.Api/net10.0).
+      - name: Restore & build
+        run: |
+          dotnet build "$TEST_INT"   -c Release
+          dotnet build "$TEST_REDIS" -c Release
+
+      # The gate: all tests must pass. Redis is available, so nothing is skipped.
+      - name: Test
+        run: |
+          dotnet test "$TEST_INT"   -c Release --no-build --verbosity normal
+          dotnet test "$TEST_REDIS" -c Release --no-build --verbosity normal
+
+      # Unique prerelease version per PR so GitHub Packages never collides.
+      - name: Compute prerelease version
+        id: ver
+        run: echo "v=1.0.0-pr.${{ github.event.pull_request.number }}.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Pack (prerelease)
+        run: |
+          dotnet pack "$LIB_MAIN"  -c Release -p:Version=${{ steps.ver.outputs.v }} -o ./artifacts
+          dotnet pack "$LIB_REDIS" -c Release -p:Version=${{ steps.ver.outputs.v }} -o ./artifacts
+
+      - name: Upload packages as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg-${{ steps.ver.outputs.v }}
+          path: ./artifacts/*.nupkg
+
+      # Publish the prerelease to GitHub Packages using the native token (no secret needed).
+      - name: Publish prerelease to GitHub Packages
+        run: |
+          dotnet nuget add source --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }} \
+            --store-password-in-clear-text --name github \
+            "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          dotnet nuget push "./artifacts/*.nupkg" --source github --skip-duplicate

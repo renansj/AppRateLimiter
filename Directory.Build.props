@@ -1,0 +1,10 @@
+<Project>
+  <!-- Centralized version. CI overrides Version via -p:Version=... for PR prereleases. -->
+  <PropertyGroup>
+    <RepositoryUrl>https://github.com/renansj/AppRateLimiter</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/renansj/AppRateLimiter</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+  </PropertyGroup>
+</Project>
